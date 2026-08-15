@@ -102,7 +102,7 @@ Open **Administration → Storage**, select **Add storage mount**, choose **SFTP
 - the trusted host key fingerprint; and
 - the selected password or private-key credentials.
 
-The remote folder must already exist. When you save the mount, VideoCMS connects to it and checks that a small test file can be created, published, read, and removed. The mount is not saved if this check fails.
+The remote folder must already exist. When you save the mount, VideoCMS connects to it and checks that a small test file can be created, safely replaced, read, and removed. This also verifies the server's rename behavior before real uploads can be retried or replaced. The mount is not saved if this check fails.
 
 While an SFTP mount is connected, you can change its display name, credentials, authentication method, or trusted fingerprints. Detach it before changing the host, port, username, or remote folder. Changing those fields points at a different file namespace, even if the new server contains a copy of the same data.
 
@@ -114,6 +114,7 @@ Common errors usually point to one of these setup problems:
 - **Authentication failed:** confirm the username and password, or verify that the matching public key is installed for the account. For encrypted private keys, also check the passphrase.
 - **Folder not found:** use the path as the SFTP account sees it. A restricted account may start in its own home folder and may not see the server's full filesystem path.
 - **Permission or storage check failed:** confirm the account can create folders and can create, rename, read, and delete files below the selected folder. Also check free space and quota.
+- **Safe replacement is not supported:** the SFTP server must support atomic replacement through the OpenSSH `posix-rename@openssh.com` extension or equivalent overwrite behavior. VideoCMS refuses to delete the old file first because a failed follow-up rename could otherwise lose known-good media.
 - **Timeout or connection refused:** confirm the host and port are reachable from the VideoCMS container or server and that outbound SSH traffic is allowed by your firewall.
 
 After correcting the server or network, use **Check connection** on a connected mount. For a detached mount, update its settings if needed and select **Mount**.
