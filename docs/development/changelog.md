@@ -74,6 +74,7 @@ VideoCMS is currently in its **Beta** phase.
 
 ### Unreleased
 
+- Added SFTP storage mounts with password or private-key login, required host-key verification, safe file replacement checks, and reconnectable storage folders.
 - Added persistent, deduplicated public download preparation jobs with queue position, FFmpeg progress, best-effort ETA, restart recovery, six-hour artifact retention, and Range delivery.
 - Split delivery statistics into player and prepared-file download traffic while preserving combined totals.
 - Added admin limits for preparation concurrency, queue size, and artifact retention.

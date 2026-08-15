@@ -114,4 +114,4 @@ VideoCMS uses **SQLite** in WAL (Write-Ahead Logging) mode.
 ## Scaling Implications
 
 *   **CPU:** The "Worker Loop" is CPU-intensive. Since it runs inside the API binary, scaling the API horizontally (multiple replicas) requires a shared filesystem (NFS) for `./videos` and a shared database, which SQLite does not support well across networks.
-*   **Storage:** Since the structure is flat file-based, you can easily mount `./videos` to a large HDD array or use `rclone` (see Cookbooks) to mount S3 buckets.
+*   **Storage:** Local media stays in `./videos`. Administrators can also connect S3-compatible buckets or SFTP folders and route new uploads through storage pools.

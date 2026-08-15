@@ -8,7 +8,7 @@ description: Add S3-compatible or SFTP storage, route uploads, and reconnect mov
 
 VideoCMS always includes its built-in local storage. Administrators can add multiple S3-compatible or SFTP mounts in **Administration → Storage**, group mounts into upload pools, choose the instance default pool, and optionally assign a different pool to an individual user.
 
-Each file lives on exactly one mount. VideoCMS does not replicate objects between mounts; backups and replication remain the responsibility of your storage infrastructure.
+Each file lives on exactly one mount. VideoCMS does not replicate files between mounts; backups and replication remain the responsibility of your storage infrastructure.
 
 ## Upgrade an existing installation
 
@@ -23,7 +23,7 @@ Existing files remain at their current paths. Adding remote storage does not mov
 
 ## Configure credential encryption
 
-Remote-adapter credentials cannot be saved until `StorageEncryptionKey` is present in the server environment. Generate a 32-byte key:
+Remote storage credentials cannot be saved until `StorageEncryptionKey` is present in the server environment. Generate a 32-byte key:
 
 ```bash
 openssl rand -base64 32
@@ -40,7 +40,7 @@ services:
 
 Restart VideoCMS after adding the key. Keep it with the installation's other secrets and backups: it is needed to read the encrypted credentials saved in the database. It is not required for installations that only use local storage.
 
-If the key is lost or intentionally changed, the objects remain intact but VideoCMS cannot decrypt the saved credentials. Set a valid new key, restart the service, edit each affected mount to enter its credentials again, then mount and reconnect it.
+If the key is lost or intentionally changed, the stored files remain intact but VideoCMS cannot decrypt the saved credentials. Set a valid new key, restart the service, edit each affected mount to enter its credentials again, then mount and reconnect it.
 
 ## Add an S3-compatible mount
 
@@ -58,7 +58,7 @@ While a mount is connected, its display name, credentials, and upload tuning can
 
 ## Add an SFTP mount
 
-SFTP is a good fit when your storage provider gives you an SSH/SFTP account and a writable folder instead of an object-storage API. Before adding the mount, prepare:
+SFTP is a good fit when your storage provider gives you an SFTP account and a writable folder instead of an object-storage API. This works with standard SFTP servers and hosted storage boxes without provider-specific setup. Before adding the mount, prepare:
 
 - the SFTP hostname, port, and username;
 - an existing remote folder dedicated to VideoCMS;
@@ -132,18 +132,18 @@ Any additional mount can be detached even when it owns files. Detaching:
 - removes the mount from new upload placement and runtime reads;
 - marks its active files as unavailable;
 - keeps the mount identity, encrypted configuration, pool membership, and file records; and
-- does not delete or move files in the storage backend.
+- does not delete or move files in the connected storage.
 
 Unavailable files remain visible in the library, but playback and export are disabled until their storage is reconnected.
 
 ### Permanently remove a mount
 
-After detaching a mount, you can select **Delete mount** to remove it from VideoCMS. This permanently deletes the saved mount configuration, encrypted credentials, and upload-pool memberships. It does not delete or change any files in the storage backend.
+After detaching a mount, you can select **Delete mount** to remove it from VideoCMS. This permanently deletes the saved mount configuration, encrypted credentials, and upload-pool memberships. It does not delete or change any files in the connected storage.
 
 File records that belonged to the deleted mount remain unavailable in VideoCMS. To recover them later, add a mount that points to the matching storage location and run **Scan and reconnect files**. Before deleting a mount, check the confirmation for upload pools that will be left without a member and update those pools before routing new uploads to them.
 
-To reconnect the same backend, select **Mount**. To move to replacement storage, detach the mount, preserve the same per-file paths below the configured prefix or remote folder, update the mount, and connect it again. VideoCMS validates the expected files before relinking a file record; an empty directory is not enough to count as a match.
+To reconnect the same storage, select **Mount**. To move to replacement storage, detach the mount, preserve the same per-file paths below the configured prefix or remote folder, update the mount, and connect it again. VideoCMS validates the expected files before relinking a file record; an empty directory is not enough to count as a match.
 
 The **Scan and reconnect files** action can preview matches before applying them. Scans use bounded concurrency and apply results in batches, so retrying after an interruption safely resumes the remaining work. Connecting a brand-new mount also scans for records whose previous mount is unavailable.
 
-Relinking updates database records only. It never copies, modifies, or deletes objects.
+Relinking updates database records only. It never copies, modifies, or deletes stored files.
