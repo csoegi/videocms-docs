@@ -53,6 +53,6 @@ The old synchronous `/:UUID/:QUALITY/download/:FILE` attachment endpoint has bee
 
 The storage-pools release is also automatic. On first start, VideoCMS creates the new storage tables, registers the existing media directory as the built-in `local` mount, creates a local upload pool, and assigns legacy file records to local storage. Existing media stays in place and does not need to be moved or re-uploaded.
 
-The only operator setup is for optional remote storage: configure `StorageEncryptionKey` before saving an S3-compatible mount. Instances that continue using only local storage need no new environment variable. See [Storage Pools](./storage.md) for setup and migration details.
+The only operator setup is for optional remote storage: configure `StorageEncryptionKey` before saving an S3-compatible or SFTP mount. Instances that continue using only local storage need no new environment variable. See [Storage Pools](./storage.md) for setup and migration details.
 
 If a major breaking change ever requires manual intervention, it will be prominently listed in the [Changelog](../development/changelog.md).

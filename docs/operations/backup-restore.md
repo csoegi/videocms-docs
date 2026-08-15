@@ -19,11 +19,11 @@ The database contains all application metadata, including user accounts, video r
 *   **Backup Requirement:** To ensure a consistent and non-corrupt database backup, **the VideoCMS application should be stopped** before the database files are copied. This ensures all pending transactions are flushed to disk.
 
 ### 2. Media Assets (`./videos` and remote mounts)
-This directory houses local binary data related to your videos. If you configured additional storage mounts, their buckets or object stores are equally part of the media backup set.
+This directory houses local binary data related to your videos. If you configured additional storage mounts, their S3 buckets or SFTP folders are equally part of the media backup set.
 
 *   **Processed Content (`qualitys/`):** All transcoded HLS segments, thumbnails, and subtitle files are stored here, organized by video UUID. **This is the most critical media directory to backup**, as it contains the files served to your users.
 *   **Temporary Data (`uploads/`):** This directory is used as a temporary staging area for chunked uploads and file assembly. Once a video is fully processed, its source files are removed. **Backing up the `uploads/` directory is not required.**
-*   **Remote Mounts:** Back up or replicate each configured remote bucket according to your storage provider's procedures. VideoCMS places each file on one mount and does not provide replication itself.
+*   **Remote Mounts:** Back up or replicate each configured S3 bucket or SFTP folder according to your storage provider's procedures. VideoCMS places each file on one mount and does not provide replication itself.
 
 ### 3. Configuration & Infrastructure
 The following files define your environment and should be included in your backup:

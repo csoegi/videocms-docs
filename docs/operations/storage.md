@@ -1,12 +1,12 @@
 ---
 lang: en-US
 title: Storage Pools
-description: Add S3-compatible storage, route uploads, and reconnect moved media.
+description: Add S3-compatible or SFTP storage, route uploads, and reconnect moved media.
 ---
 
 # Storage Pools
 
-VideoCMS always includes its built-in local storage. Administrators can add multiple S3-compatible mounts in **Administration → Storage**, group mounts into upload pools, choose the instance default pool, and optionally assign a different pool to an individual user.
+VideoCMS always includes its built-in local storage. Administrators can add multiple S3-compatible or SFTP mounts in **Administration → Storage**, group mounts into upload pools, choose the instance default pool, and optionally assign a different pool to an individual user.
 
 Each file lives on exactly one mount. VideoCMS does not replicate objects between mounts; backups and replication remain the responsibility of your storage infrastructure.
 
@@ -38,13 +38,13 @@ services:
       StorageEncryptionKey: "${StorageEncryptionKey}"
 ```
 
-Restart VideoCMS after adding the key. The key encrypts adapter credentials in the database using AES-256-GCM. Keep it with the installation's other secrets and backups. It is not required for installations that only use local storage.
+Restart VideoCMS after adding the key. Keep it with the installation's other secrets and backups: it is needed to read the encrypted credentials saved in the database. It is not required for installations that only use local storage.
 
 If the key is lost or intentionally changed, the objects remain intact but VideoCMS cannot decrypt the saved credentials. Set a valid new key, restart the service, edit each affected mount to enter its credentials again, then mount and reconnect it.
 
 ## Add an S3-compatible mount
 
-Open **Administration → Storage**, select **Add S3 mount**, and enter:
+Open **Administration → Storage**, select **Add storage mount**, choose **S3-compatible**, and enter:
 
 - a display name;
 - bucket and region;
@@ -55,6 +55,68 @@ Open **Administration → Storage**, select **Add S3 mount**, and enter:
 The bucket must already exist. VideoCMS checks the connection before saving the mount. A typical storage policy needs permission to list the bucket and to get, put, and delete objects below the configured prefix, including multipart-upload operations.
 
 While a mount is connected, its display name, credentials, and upload tuning can be changed. Detach it before changing the bucket, region, endpoint, prefix, or path-style mode. This prevents files from silently pointing at a different object namespace.
+
+## Add an SFTP mount
+
+SFTP is a good fit when your storage provider gives you an SSH/SFTP account and a writable folder instead of an object-storage API. Before adding the mount, prepare:
+
+- the SFTP hostname, port, and username;
+- an existing remote folder dedicated to VideoCMS;
+- either the account password or a private key accepted by the server; and
+- at least one trusted SHA256 host key fingerprint.
+
+The SFTP account must be allowed to list the remote folder and create, read, rename, and delete files and subfolders inside it. It does not need access to the rest of the server. A dedicated account and folder make permissions and backups easier to reason about.
+
+### Get the host key fingerprint
+
+The fingerprint identifies the server before VideoCMS sends credentials. Obtain it from your provider's control panel or documentation, or ask the server administrator. On a server you control, an administrator can print the Ed25519 host key fingerprint with:
+
+```bash
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256
+```
+
+Copy the value beginning with `SHA256:`. Verify it through a trusted channel; do not rely only on the fingerprint shown by a first connection from the VideoCMS host.
+
+VideoCMS accepts one fingerprint per line. This makes host-key rotation possible without downtime: add the new fingerprint while the old key is still active, rotate the server key, verify the mount, then remove the old fingerprint.
+
+### Choose authentication
+
+Use **Password** when the storage account is password-based. Use **Private key** when the provider accepts SSH keys; paste the complete private key and, if applicable, its passphrase. The private key and passphrase are encrypted with `StorageEncryptionKey` before they are saved and are never returned by the API.
+
+If you need a dedicated key pair, generate one on a trusted machine and install only its `.pub` file on the SFTP account:
+
+```bash
+ssh-keygen -t ed25519 -f ./videocms-sftp -C "videocms storage"
+```
+
+Keep the private `videocms-sftp` file secret. The server or provider receives `videocms-sftp.pub`; the VideoCMS form receives the private key.
+
+### Connect the mount
+
+Open **Administration → Storage**, select **Add storage mount**, choose **SFTP**, and enter:
+
+- a display name;
+- the host and port, usually port `22`;
+- the SFTP username;
+- the remote folder, such as `videocms` or `/home/media/videocms`;
+- the trusted host key fingerprint; and
+- the selected password or private-key credentials.
+
+The remote folder must already exist. When you save the mount, VideoCMS connects to it and checks that a small test file can be created, published, read, and removed. The mount is not saved if this check fails.
+
+While an SFTP mount is connected, you can change its display name, credentials, authentication method, or trusted fingerprints. Detach it before changing the host, port, username, or remote folder. Changing those fields points at a different file namespace, even if the new server contains a copy of the same data.
+
+### Troubleshoot an SFTP connection
+
+Common errors usually point to one of these setup problems:
+
+- **Host key mismatch:** compare the received fingerprint in the error with the trusted value from your provider or server. Update the saved value only after independently confirming an intentional key rotation.
+- **Authentication failed:** confirm the username and password, or verify that the matching public key is installed for the account. For encrypted private keys, also check the passphrase.
+- **Folder not found:** use the path as the SFTP account sees it. A restricted account may start in its own home folder and may not see the server's full filesystem path.
+- **Permission or storage check failed:** confirm the account can create folders and can create, rename, read, and delete files below the selected folder. Also check free space and quota.
+- **Timeout or connection refused:** confirm the host and port are reachable from the VideoCMS container or server and that outbound SSH traffic is allowed by your firewall.
+
+After correcting the server or network, use **Check connection** on a connected mount. For a detached mount, update its settings if needed and select **Mount**.
 
 ## Route new uploads
 
@@ -69,17 +131,17 @@ Any additional mount can be detached even when it owns files. Detaching:
 - removes the mount from new upload placement and runtime reads;
 - marks its active files as unavailable;
 - keeps the mount identity, encrypted configuration, pool membership, and file records; and
-- does not delete or move objects in the bucket.
+- does not delete or move files in the storage backend.
 
 Unavailable files remain visible in the library, but playback and export are disabled until their storage is reconnected.
 
 ### Permanently remove a mount
 
-After detaching a mount, you can select **Delete mount** to remove it from VideoCMS. This permanently deletes the saved mount configuration, encrypted credentials, and upload-pool memberships. It does not delete or change any objects in the bucket.
+After detaching a mount, you can select **Delete mount** to remove it from VideoCMS. This permanently deletes the saved mount configuration, encrypted credentials, and upload-pool memberships. It does not delete or change any files in the storage backend.
 
 File records that belonged to the deleted mount remain unavailable in VideoCMS. To recover them later, add a mount that points to the matching storage location and run **Scan and reconnect files**. Before deleting a mount, check the confirmation for upload pools that will be left without a member and update those pools before routing new uploads to them.
 
-To reconnect the same bucket, select **Mount**. To move to a replacement bucket or endpoint, detach the mount, preserve the same per-file object paths below the configured prefix, update the mount, and connect it again. VideoCMS validates persisted source and completed output-manifest objects before relinking a file record. It does not treat an empty UUID-shaped directory as a match.
+To reconnect the same backend, select **Mount**. To move to replacement storage, detach the mount, preserve the same per-file paths below the configured prefix or remote folder, update the mount, and connect it again. VideoCMS validates the expected files before relinking a file record; an empty directory is not enough to count as a match.
 
 The **Scan and reconnect files** action can preview matches before applying them. Scans use bounded concurrency and apply results in batches, so retrying after an interruption safely resumes the remaining work. Connecting a brand-new mount also scans for records whose previous mount is unavailable.
 
