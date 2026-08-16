@@ -57,7 +57,7 @@ A running job can briefly report that it is finalizing and hide the cancel actio
 
 Use **Pause** to temporarily free capacity or stop an operation before planned maintenance. A running job pauses at its next safe checkpoint, so it may briefly show **Pause requested**. Progress and attempt history are preserved. Use **Resume** when its dependencies and storage are ready again.
 
-Only jobs designed with safe checkpoints offer pause and resume. A final publishing step cannot be paused because interrupting it could leave the visible result inconsistent.
+Only jobs designed with durable safe checkpoints offer pause and resume. Jobs without that guarantee show cancel and retry controls instead. A final publishing step cannot be paused because interrupting it could leave the visible result inconsistent.
 
 Use **Cancel** when an operation is no longer needed. Queued work stops immediately. Running work stops at the next safe point, so cancellation may not appear instantaneous.
 

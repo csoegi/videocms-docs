@@ -150,6 +150,8 @@ Before starting, make sure:
 
 VideoCMS reports the number of videos, tracked bytes, planned destination placement, and important routing warnings before it starts. It cannot reliably detect every provider quota, so compare the preview with the capacity reported by your storage provider.
 
+Start the migration from the preview you just reviewed. If videos, mounts, sizes, or destination placement change before confirmation, VideoCMS refuses the stale plan and asks you to preview again. Retrying the Start button after a lost or timed-out response is safe: the same request returns the migration that was already created instead of creating a duplicate.
+
 Copies travel through the VideoCMS server. When moving between two remote providers, plan for inbound and outbound bandwidth on the host as well as any provider egress charges. Keep both mounts connected until the migration and its original cleanup have finished.
 
 Starting a migration does not change the default upload pool or any per-user pool assignment. New uploads and videos created after the snapshot are not added to the running migration.
@@ -169,7 +171,9 @@ Avoid manually moving, renaming, or deleting files on either storage system whil
 
 After every video has switched successfully, VideoCMS waits 24 hours before deleting originals from the source. Playback already uses the destination during this period. The delay gives you time to inspect the result and choose **Keep originals** if you want to retain the remaining source copies.
 
-Original cleanup is a separate background job. It can be paused or canceled, and it only deletes a source copy when the matching video still points to the expected destination. If cleanup has already started, **Keep originals** preserves what remains but cannot restore originals already removed.
+Original cleanup is a separate background job. It can be paused or canceled, and it only deletes a source copy when the matching video still points to the expected destination. Cleanup finishes the current video before stopping, so one video's original is never intentionally left half-deleted by a pause or cancel. If cleanup has already started, **Keep originals** preserves what remains but cannot restore originals already removed.
+
+If the storage provider itself fails partway through deleting a video's objects, the detail page marks that original as **Original may be incomplete**. Inspect that source folder in the provider before treating it as a usable retained copy.
 
 A migration is complete only after original cleanup finishes, or when an administrator chooses to keep the remaining originals. Retained originals are unmanaged duplicate data: include them in capacity planning and remove them manually only after confirming that playback and backups use the intended destination.
 
