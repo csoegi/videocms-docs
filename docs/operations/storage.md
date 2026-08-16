@@ -63,21 +63,23 @@ SFTP is a good fit when your storage provider gives you an SFTP account and a wr
 - the SFTP hostname, port, and username;
 - an existing remote folder dedicated to VideoCMS;
 - either the account password or a private key accepted by the server; and
-- at least one trusted SHA256 host key fingerprint.
+- if available, the server's SHA256 host key fingerprint from your provider or server administrator.
 
 The SFTP account must be allowed to list the remote folder and create, read, rename, and delete files and subfolders inside it. It does not need access to the rest of the server. A dedicated account and folder make permissions and backups easier to reason about.
 
-### Get the host key fingerprint
+### Verify the server identity
 
-The fingerprint identifies the server before VideoCMS sends credentials. Obtain it from your provider's control panel or documentation, or ask the server administrator. On a server you control, an administrator can print the Ed25519 host key fingerprint with:
+The fingerprint identifies the server before VideoCMS sends credentials. After you enter the host and port, select **Fetch host key**. VideoCMS connects only far enough to read the presented key; it does not send the SFTP username, password, or private key. Review the fingerprint and select **Trust this host key** to add it to the mount.
+
+A first connection cannot prove that the presented key belongs to the intended server. When possible, compare it with the fingerprint in your provider's control panel or documentation, or ask the server administrator. On a server you control, an administrator can print the Ed25519 host key fingerprint with:
 
 ```bash
 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256
 ```
 
-Copy the value beginning with `SHA256:`. Verify it through a trusted channel; do not rely only on the fingerprint shown by a first connection from the VideoCMS host.
+Compare the value beginning with `SHA256:`. If it matches, trust the key shown in VideoCMS. You can also expand **Add a verified fingerprint manually** and paste a value supplied by your provider.
 
-VideoCMS accepts one fingerprint per line. This makes host-key rotation possible without downtime: add the new fingerprint while the old key is still active, rotate the server key, verify the mount, then remove the old fingerprint.
+VideoCMS can trust multiple fingerprints. This makes host-key rotation possible without downtime: add the new fingerprint while the old key is still active, rotate the server key, verify the mount, then remove the old fingerprint.
 
 ### Choose authentication
 
@@ -99,10 +101,11 @@ Open **Administration → Storage**, select **Add storage mount**, choose **SFTP
 - the host and port, usually port `22`;
 - the SFTP username;
 - the remote folder, such as `videocms` or `/home/media/videocms`;
-- the trusted host key fingerprint; and
 - the selected password or private-key credentials.
 
-The remote folder must already exist. When you save the mount, VideoCMS connects to it and checks that a small test file can be created, safely replaced, read, and removed. This also verifies the server's rename behavior before real uploads can be retried or replaced. The mount is not saved if this check fails.
+Select **Fetch host key**, compare the fingerprint when possible, and explicitly trust it. Then select **Test connection**. VideoCMS checks that the remote folder exists and that a small test file can be created, safely replaced, read, and removed. This also verifies the server's rename behavior before real uploads can be retried or replaced. The test does not save the mount, so you can correct settings and repeat it safely.
+
+When the test succeeds, select **Add mount**. VideoCMS repeats the connection check while saving so an untested or changed configuration cannot be mounted accidentally. The mount is not saved if that final check fails.
 
 While an SFTP mount is connected, you can change its display name, credentials, authentication method, or trusted fingerprints. Detach it before changing the host, port, username, or remote folder. Changing those fields points at a different file namespace, even if the new server contains a copy of the same data.
 
