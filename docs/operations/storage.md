@@ -1,14 +1,14 @@
 ---
 lang: en-US
 title: Storage Pools
-description: Add S3-compatible or SFTP storage, route uploads, and reconnect moved media.
+description: Add storage mounts, route uploads, and safely migrate existing videos between pools.
 ---
 
 # Storage Pools
 
 VideoCMS always includes its built-in local storage. Administrators can add multiple S3-compatible or SFTP mounts in **Administration → Storage**, group mounts into upload pools, choose the instance default pool, and optionally assign a different pool to an individual user.
 
-Each file lives on exactly one mount. VideoCMS does not replicate files between mounts; backups and replication remain the responsibility of your storage infrastructure.
+Each file plays from exactly one active mount. Storage migrations can retain a temporary or administrator-selected original copy, but they are not a backup or replication system. Backups and ongoing replication remain the responsibility of your storage infrastructure.
 
 ## Upgrade an existing installation
 
@@ -19,7 +19,7 @@ No manual database or media migration is required. On startup, VideoCMS automati
 - creates a built-in local upload pool and selects it as the default when no other default exists; and
 - marks existing file records as available and assigns legacy records without a storage ID to `local`.
 
-Existing files remain at their current paths. Adding remote storage does not move them, and changing the default pool only affects new uploads.
+Existing files remain at their current paths. Adding remote storage does not move them, and changing the default pool only affects new uploads. Use a storage migration when existing videos should move to another pool.
 
 ## Configure credential encryption
 
@@ -124,6 +124,62 @@ After correcting the server or network, use **Check connection** on a connected 
 Create a pool with one or more mounts and make it the instance default, or choose a pool on an individual user's admin form. For each new file, VideoCMS orders the available members by the number of bytes currently tracked on the mount and writes to the least-used member. Ties are deterministic. If a write fails, it tries the next available member.
 
 Pool changes never move existing files. The selected mount ID is stored on the file record and is used for later reads, encoding outputs, and deletion.
+
+## Migrate existing videos between pools
+
+Open **Administration → Storage → Migrations** when existing videos need to move from one pool to another. A migration takes a fixed snapshot of the currently available videos on the source pool and assigns each one to a healthy destination mount.
+
+The migration is designed to keep videos available throughout the move:
+
+1. the video continues playing from its source mount while VideoCMS copies it;
+2. VideoCMS performs a final sync and verifies the complete destination copy;
+3. the database switches that video to the destination in one operation; and
+4. only after every video has switched does a 24-hour original-retention period begin.
+
+Partially copied data is never selected for playback. Videos switch one at a time, so a large migration does not wait for every copy before using completed destinations.
+
+### Prepare for a migration
+
+Before starting, make sure:
+
+- the source and destination are different pools and do not share any mounts;
+- every mount in both pools is connected and healthy;
+- the destination has enough free space for the amount shown in the preview;
+- provider quotas and object or file-count limits will not be exceeded; and
+- the VideoCMS host can reach both sides for the entire migration.
+
+VideoCMS reports the number of videos, tracked bytes, planned destination placement, and important routing warnings before it starts. It cannot reliably detect every provider quota, so compare the preview with the capacity reported by your storage provider.
+
+Copies travel through the VideoCMS server. When moving between two remote providers, plan for inbound and outbound bandwidth on the host as well as any provider egress charges. Keep both mounts connected until the migration and its original cleanup have finished.
+
+Starting a migration does not change the default upload pool or any per-user pool assignment. New uploads and videos created after the snapshot are not added to the running migration.
+
+### Monitor and control the migration
+
+The migration detail page shows overall progress and the copy, verification, active mount, and original-cleanup state of every video. The same work also appears in **Background jobs**, with its event and attempt history.
+
+- **Pause** stops at a safe checkpoint. Already-switched videos continue playing from the destination, while the others continue playing from the source. **Resume** reuses destination objects that were already copied and verified.
+- **Cancel** leaves already-switched videos on the destination and unfinished videos on the source. VideoCMS removes unreferenced partial destination data in a separate cleanup job and retains the source originals of switched videos.
+- **Retry** after reconnecting a mount or correcting capacity, permission, or network problems. The migration keeps its previous history and resumes its fixed placement rather than creating a second migration.
+- **Cancel migration** is also available after the main job fails, so you can release its reservations instead of retrying. The same safe cancellation cleanup applies.
+
+Avoid manually moving, renaming, or deleting files on either storage system while a migration is active. VideoCMS blocks mount and pool changes that would invalidate the migration, but it cannot protect against changes made directly through a provider's control panel or filesystem.
+
+### Original cleanup
+
+After every video has switched successfully, VideoCMS waits 24 hours before deleting originals from the source. Playback already uses the destination during this period. The delay gives you time to inspect the result and choose **Keep originals** if you want to retain the remaining source copies.
+
+Original cleanup is a separate background job. It can be paused or canceled, and it only deletes a source copy when the matching video still points to the expected destination. If cleanup has already started, **Keep originals** preserves what remains but cannot restore originals already removed.
+
+A migration is complete only after original cleanup finishes, or when an administrator chooses to keep the remaining originals. Retained originals are unmanaged duplicate data: include them in capacity planning and remove them manually only after confirming that playback and backups use the intended destination.
+
+### Troubleshoot a migration
+
+- **Preflight refuses to start:** connect every pool member, remove any mount overlap, and finish or cancel another migration that includes the same videos.
+- **A copy repeatedly fails:** check destination capacity and quota, credentials, SFTP permissions or S3 policy, and network reachability from the VideoCMS host.
+- **The job is paused:** reconnect any unavailable mount before resuming. A service restart does not discard the checkpoint.
+- **Cleanup is waiting:** the 24-hour retention period may still be active. Check the scheduled time on the migration page.
+- **A mount cannot be detached, edited, or deleted:** finish the active migration and its cleanup first. After cancellation or a decision to retain originals, VideoCMS keeps the mount protected until the original retention time has elapsed.
 
 ## Detach and reconnect a mount
 

@@ -29,7 +29,7 @@ Administrators can open **Background jobs** to inspect work across the entire in
 
 - filtering by status, queue, owner, or search text;
 - detailed task attempts and redacted diagnostics;
-- controls to cancel or retry eligible jobs and tasks;
+- controls to pause, resume, cancel, or retry eligible jobs and tasks;
 - queue capacity and pause controls;
 - maintenance schedules that can be run manually; and
 - health information for supervised background services.
@@ -43,6 +43,8 @@ Pausing a queue prevents new work in that queue from starting. It does not inter
 | **Queued** | The job is waiting for capacity. |
 | **Running** | At least one task is currently active. |
 | **Retry scheduled** | A temporary problem occurred and VideoCMS will try again automatically. |
+| **Pause requested** | The job is finishing its current safe unit of work before pausing. |
+| **Paused** | The job is stopped at a durable checkpoint and can be resumed later. |
 | **Canceling** | Cancellation was requested and active work is stopping at a safe point. |
 | **Completed** | All required and optional work completed successfully. |
 | **Completed with warnings** | The main result is usable, but optional processing such as a thumbnail or encoding failed. |
@@ -51,7 +53,11 @@ Pausing a queue prevents new work in that queue from starting. It does not inter
 
 A running job can briefly report that it is finalizing and hide the cancel action. At this point VideoCMS is publishing a result or completing another step that must not be interrupted. Allow it to finish rather than restarting the service.
 
-## Cancel or retry work
+## Pause, cancel, or retry work
+
+Use **Pause** to temporarily free capacity or stop an operation before planned maintenance. A running job pauses at its next safe checkpoint, so it may briefly show **Pause requested**. Progress and attempt history are preserved. Use **Resume** when its dependencies and storage are ready again.
+
+Only jobs designed with safe checkpoints offer pause and resume. A final publishing step cannot be paused because interrupting it could leave the visible result inconsistent.
 
 Use **Cancel** when an operation is no longer needed. Queued work stops immediately. Running work stops at the next safe point, so cancellation may not appear instantaneous.
 
@@ -69,7 +75,7 @@ VideoCMS limits concurrent work so background processing does not overwhelm the 
 | --- | --- | --- |
 | `ffmpeg` | Encoding, thumbnails, and prepared downloads | `MaxParallelFFmpegTasks` |
 | `network` | Remote downloads | `MaxParallelDownloads` |
-| `storage` | Imports and deletions | 2 |
+| `storage` | Imports, storage migrations, and deletions | 2 |
 | `maintenance` | Cleanup and reconciliation | 1 |
 | `audit` | API-key audit records | 1 |
 
@@ -82,9 +88,10 @@ If interactive use becomes slow during encoding, lower `MaxParallelFFmpegTasks`.
 Open the administrator task center and check:
 
 1. whether its queue is paused;
-2. whether all available capacity is occupied by other jobs;
-3. whether the background runtime and supervised services report healthy; and
-4. whether the feature required by the job is enabled.
+2. whether the individual job is paused;
+3. whether all available capacity is occupied by other jobs;
+4. whether the background runtime and supervised services report healthy; and
+5. whether the feature required by the job is enabled.
 
 Queued jobs continue automatically when capacity becomes available or the queue is resumed.
 

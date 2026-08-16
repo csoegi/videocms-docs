@@ -47,7 +47,7 @@ Hardening and maintaining your production instance.
 - **[Production Deployment](../operations/production.md)**
   Setting up Reverse Proxies (Caddy/Nginx) with SSL termination.
 - **[Storage Pools](../operations/storage.md)**
-  Add S3-compatible or SFTP mounts, route uploads, and reconnect moved storage.
+  Add S3-compatible or SFTP mounts, route uploads, migrate existing videos, and reconnect storage.
 - **[Backup & Restore](../operations/backup-restore.md)**
   Ensuring data safety with SQLite WAL-mode consistency.
 - **[Security Best Practices](../operations/security.md)**
