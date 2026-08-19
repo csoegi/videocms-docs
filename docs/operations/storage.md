@@ -128,6 +128,26 @@ Create a pool with one or more mounts and make it the instance default, or choos
 
 Pool changes never move existing files. The selected mount ID is stored on the file record and is used for later reads, encoding outputs, and deletion.
 
+## Add a read cache to a pool
+
+A read cache can reduce repeated reads and provider egress from remote primary storage. This is especially useful when S3-compatible storage is authoritative but the VideoCMS host has inexpensive local disk available.
+
+Edit a storage pool, select one or more mounts under **Read cache**, and set a maximum cache size for each. The built-in local storage mount can be selected as a cache for another pool even though it remains the primary storage of the built-in local pool.
+
+Read caches are intentionally disposable:
+
+- the cache starts empty and fills only when media is played;
+- the first uncached playback still reads from the primary mount;
+- repeated playback can use the cached copy;
+- VideoCMS removes least-recently-used copies as the configured limit approaches; and
+- when a mount reports its capacity, VideoCMS also tries to preserve at least 10% free space for the host and other applications.
+
+The file's primary mount remains authoritative at all times. A full, detached, or unavailable cache falls back to primary storage and does not make the video unavailable. Removing a read cache from a pool also does not delete or move the primary copy.
+
+Set the cache limit below the amount of disk you can safely dedicate to playback. The 10% free-space protection is an additional safeguard, not a substitute for reserving enough space for the operating system, temporary uploads, encoding, logs, and backups.
+
+If a cache transfer fails, VideoCMS retries it as an administrator-visible background job. Open **Background jobs** to see its attempts and error details. Successful on-demand cache fills stay out of the job list to avoid routine playback noise. Scheduled cache maintenance appears under **Queues & schedules**.
+
 ## Migrate existing videos between pools
 
 Open **Administration → Storage → Migrations** when existing videos need to move from one pool to another. A migration takes a fixed snapshot of the currently available videos on the source pool and assigns each one to a healthy destination mount.
@@ -173,6 +193,8 @@ Avoid manually moving, renaming, or deleting files on either storage system whil
 ### Original cleanup
 
 After every video has switched successfully, VideoCMS waits 24 hours before deleting originals from the source. Playback already uses the destination during this period. The delay gives you time to inspect the result and choose **Keep originals** if you want to retain the remaining source copies.
+
+After checking playback, an administrator can choose **Start cleanup now** to skip the remaining retention time. The same safety checks still apply; only the wait is skipped.
 
 Original cleanup is a separate background job. It can be paused or canceled, and it only deletes a source copy when the matching video still points to the expected destination. Cleanup finishes the current video before stopping, so one video's original is never intentionally left half-deleted by a pause or cancel. If cleanup has already started, **Keep originals** preserves what remains but cannot restore originals already removed.
 

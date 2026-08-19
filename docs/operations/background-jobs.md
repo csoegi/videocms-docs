@@ -75,8 +75,8 @@ VideoCMS limits concurrent work so background processing does not overwhelm the 
 | --- | --- | --- |
 | `ffmpeg` | Encoding, thumbnails, and prepared downloads | `MaxParallelFFmpegTasks` |
 | `network` | Remote downloads | `MaxParallelDownloads` |
-| `storage` | Imports, storage migrations, and deletions | 2 |
-| `maintenance` | Cleanup and reconciliation | 1 |
+| `storage` | Imports, storage migrations, deletions, and retried cache fills | 2 |
+| `maintenance` | Cleanup, cache eviction, and reconciliation | 1 |
 | `audit` | API-key audit records | 1 |
 
 If interactive use becomes slow during encoding, lower `MaxParallelFFmpegTasks`. Increase it only when the server has enough CPU, memory, and disk throughput. The queue view shows active and waiting counts so you can confirm whether capacity is the bottleneck.
@@ -102,10 +102,13 @@ Open its details and compare the attempt errors. Common causes include:
 - a remote server that is unavailable or rate-limiting downloads;
 - insufficient local disk space;
 - an unavailable storage mount;
+- a read cache whose limit, permissions, or available disk space prevents a playback copy from being stored;
 - invalid media that FFmpeg cannot process; or
 - filesystem permissions that prevent VideoCMS from reading or writing media.
 
 Fix the underlying problem before using a manual retry.
+
+Playback cache failures do not change the authoritative video or stop fallback playback from primary storage. Correct the cache mount problem and retry the failed **Playback cache fill** job. If the cache is not needed, remove it from the pool instead; the primary video remains untouched.
 
 ### A job failed after a restart
 
