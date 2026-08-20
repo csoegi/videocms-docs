@@ -142,7 +142,7 @@ Read caches are intentionally disposable:
 - VideoCMS removes least-recently-used copies as the configured limit approaches; and
 - when a mount reports its capacity, VideoCMS also tries to preserve at least 10% free space for the host and other applications.
 
-Only a completed media-object read is kept. If playback is interrupted or requests only part of an uncached object, VideoCMS serves that request from primary storage but does not start a separate full download just to fill the cache. This keeps the cache on demand and avoids fetching data nobody watched.
+Only media requested by a viewer is considered for caching; VideoCMS does not scan or prefill the library. When a player uses a range request, seeks, or disconnects after beginning an uncached object, VideoCMS finishes that requested object independently and adds the verified copy to the read cache. This makes later playback reliable without turning the cache into a full-library backfill.
 
 The file's primary mount remains authoritative at all times. A full, detached, or unavailable cache falls back to primary storage and does not make the video unavailable. Removing a read cache from a pool also does not delete or move the primary copy.
 
@@ -153,6 +153,8 @@ If a cache transfer fails, VideoCMS retries it as an administrator-visible backg
 ### Check whether the cache is helping
 
 The **Delivery traffic** section on **Administration → Storage** shows the last 30 days of playback bytes and requests served from primary storage versus read cache. Each pool shows its cache share, and the mount table shows the traffic that actually reached each backend. A cache hit is counted against the cache mount; a miss is counted against the primary mount.
+
+For a single media request, browser developer tools can inspect the `X-VideoCMS-Cache` response header. `FILLING` means the response came from primary storage and an on-demand cache fill is in progress; `HIT` means the response came from a read cache. `MISS` means no usable cached copy was available, while `BYPASS` means the requested file is not routed through a pool with a read cache.
 
 Storage attribution begins after upgrading to a version that provides these figures. Older traffic is left unassigned instead of being estimated, and VideoCMS does not scan or prefill existing media to produce the statistics.
 
