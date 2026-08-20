@@ -142,11 +142,19 @@ Read caches are intentionally disposable:
 - VideoCMS removes least-recently-used copies as the configured limit approaches; and
 - when a mount reports its capacity, VideoCMS also tries to preserve at least 10% free space for the host and other applications.
 
+Only a completed media-object read is kept. If playback is interrupted or requests only part of an uncached object, VideoCMS serves that request from primary storage but does not start a separate full download just to fill the cache. This keeps the cache on demand and avoids fetching data nobody watched.
+
 The file's primary mount remains authoritative at all times. A full, detached, or unavailable cache falls back to primary storage and does not make the video unavailable. Removing a read cache from a pool also does not delete or move the primary copy.
 
 Set the cache limit below the amount of disk you can safely dedicate to playback. The 10% free-space protection is an additional safeguard, not a substitute for reserving enough space for the operating system, temporary uploads, encoding, logs, and backups.
 
 If a cache transfer fails, VideoCMS retries it as an administrator-visible background job. Open **Background jobs** to see its attempts and error details. Successful on-demand cache fills stay out of the job list to avoid routine playback noise. Scheduled cache maintenance appears under **Queues & schedules**.
+
+### Check whether the cache is helping
+
+The **Delivery traffic** section on **Administration → Storage** shows the last 30 days of playback bytes and requests served from primary storage versus read cache. Each pool shows its cache share, and the mount table shows the traffic that actually reached each backend. A cache hit is counted against the cache mount; a miss is counted against the primary mount.
+
+Storage attribution begins after upgrading to a version that provides these figures. Older traffic is left unassigned instead of being estimated, and VideoCMS does not scan or prefill existing media to produce the statistics.
 
 ## Migrate existing videos between pools
 
