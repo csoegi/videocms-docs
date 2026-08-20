@@ -36,7 +36,7 @@ VideoCMS is configured using environment variables. This page lists all availabl
 | :--- | :--- | :--- |
 | `EncodingEnabled` | Enable video encoding (true/false). | - |
 | `UploadEnabled` | Enable video uploads (true/false). | - |
-| `DownloadEnabled` | Enable video downloads (true/false). | - |
+| `DownloadEnabled` | Enable prepared video downloads. Disabling cancels queued/active preparations and removes ready artifacts. | `true` |
 | `RemoteDownloadEnabled` | Enable server-side remote downloads (true/false). Disabling cancels pending/running remote jobs. | `true` |
 | `PlayerV2Enabled` | Enable the V2 player (true/false). | - |
 | `ContinueWatchingPopupEnabled` | Enable "Continue Watching" popup (true/false). | - |
@@ -61,6 +61,9 @@ VideoCMS is configured using environment variables. This page lists all availabl
 | `MaxRunningEncodes` | Max concurrent encoding jobs. | - |
 | `MaxParallelDownloads` | Max concurrent remote download jobs. | `1` |
 | `RemoteDownloadTimeout` | Max seconds for one remote download. | `3600` |
+| `MaxParallelDownloadPreparations` | Max concurrent FFmpeg packaging jobs for public downloads (1-8). | `1` |
+| `MaxQueuedDownloadPreparations` | Max public download preparation jobs waiting for a worker (1-500). | `20` |
+| `DownloadPreparationRetentionHours` | Hours newly prepared files remain available (1-168). | `6` |
 | `MaxFramerate` | Max framerate for encoded videos. | - |
 | `MaxUploadFilesize` | Max upload file size (bytes). | - |
 | `MaxUploadChunkSize` | Max tus PATCH request body size (bytes). Keep this below reverse-proxy upload body limits. | - |
@@ -74,7 +77,18 @@ VideoCMS is configured using environment variables. This page lists all availabl
 | `FolderVideoQualitysPriv` | Private path for encoded videos. | `./videos/qualitys` |
 | `FolderVideoQualitysPub` | Public URL path for encoded videos. | `/videos/qualitys` |
 | `FolderVideoUploadsPriv` | Private path for uploaded raw files. | `./videos/uploads` |
+| `StorageScratchDir` | Local staging directory used while remote objects are encoded or otherwise processed. | `./videos/scratch` |
 | `StatsDriveName` | Drive name for disk stats (e.g., `nvme0n1`). | `nvme0n1` |
+
+## Additional Storage
+
+Additional storage mounts and upload pools are configured in **Administration → Storage**. Local storage remains available by default, so no storage environment variables are required for a local-only installation.
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `StorageEncryptionKey` | Base64-encoded 32-byte key used to encrypt remote-mount credentials. Generate it with `openssl rand -base64 32`. Required before an administrator can save a remote mount. Back it up with the database. | - |
+
+See the [Storage Pools guide](../operations/storage.md) for mount, routing, migration, and recovery instructions.
 
 ## CDN Integration
 
